@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slider de Cursos - Por Bolívar Alencastro</title>
+    <style>
+        /* Reset básico e Estilos Gerais */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden; /* Prevent scrollbars */
+            font-family: sans-serif;
+            background-color: #333; /* Dark background for contrast */
+            position: relative; /* Needed for absolute positioning context */
+        }
+
+        /* Designer Credit Link */
+        .designer-credit {
+            position: absolute; /* Relative to body */
+            top: 20px;
+            right: 25px;
+            z-index: 110; /* Above slider controls */
+        }
+
+        .designer-credit a {
+            font-size: 12px;
+            color: #ddd; /* Light gray color */
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        .designer-credit a:hover {
+            opacity: 1;
+        }
+
+        .designer-credit strong {
+            font-weight: 700; /* Ensure bold is applied */
+        }
+
+
+        /* Container principal - Ocupa toda a tela */
+        .slider-container {
+            position: relative; /* Contexto para slides e botões */
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Wrapper for each item (Slide + AI Info) - THIS GETS POSITIONED/ANIMATED */
+        .slide-wrapper-item {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Center the wrapper */
+            width: auto; /* Fit content */
+            height: auto; /* Fit content */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center card and text horizontally */
+
+            /* Transition for fade effect */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease-in-out, visibility 0s linear 0.5s;
+            z-index: 1; /* Base stacking */
+        }
+
+        .slide-wrapper-item.active {
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.5s ease-in-out;
+            z-index: 10; /* Bring active slide to front */
+        }
+
+
+        /* Estilo Base do Card (Slide) - Now sits inside the wrapper */
+        .slide {
+            /* REMOVED: Absolute positioning, transform, opacity, visibility, transition - handled by wrapper */
+            width: auto;
+            height: auto;
+            max-width: 90vw; /* Prevent card from being too wide */
+            max-height: 85vh; /* Slightly less height to allow space for text below */
+
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+
+            display: flex;
+            flex-direction: column;
+            /* Ensure card doesn't stretch unnecessarily */
+             align-self: center;
+        }
+
+        /* AI Creator Info Text */
+        .ai-creator-info {
+            margin-top: 15px; /* Space between card and text */
+            font-size: 0.8em;
+            color: #aaa;
+            text-align: center;
+        }
+
+
+        /* --- Estilos Comuns Internos (Largely Unchanged) --- */
+        .card-image-container { position: relative; width: 100%; flex-shrink: 0; }
+        .card-image { display: block; width: 100%; height: auto; max-height: 40vh; object-fit: cover; }
+        .card-content { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .tag-new-yellow { position: absolute; top: 15px; right: 15px; background: linear-gradient(45deg, #ffda77, #ffc107); color: #333; padding: 6px 12px; border-radius: 5px; font-size: 0.9em; font-weight: bold; z-index: 5; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transform: rotate(5deg); }
+        .tag-new-red { position: absolute; top: 15px; right: 15px; background-color: #dc3545; color: white; padding: 6px 12px; border-radius: 5px; font-size: 0.9em; font-weight: bold; z-index: 5; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .image-overlay-bottom { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0)); color: white; padding: 20px 15px 10px 15px; font-size: 0.9em; z-index: 4; }
+        .image-overlay-bottom.tag-style { background: rgba(0, 0, 0, 0.6); bottom: 10px; left: 10px; right: auto; padding: 5px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; }
+        .card-content .tag { font-size: 0.85em; color: #007bff; margin-bottom: 8px; text-transform: uppercase; font-weight: 600; }
+        .card-content h2 { font-size: 1.6em; margin-bottom: 12px; color: #333; line-height: 1.3; }
+        .card-content .details { font-size: 0.9em; color: #555; margin-bottom: 18px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #eee; padding-bottom: 12px;}
+        .card-content .details span { display: inline-flex; align-items: center; gap: 5px; }
+        .card-content .details .rating { color: #f39c12; font-weight: bold;}
+        .card-content .details .rating .stars { letter-spacing: 1px;}
+        .card-content p.description { font-size: 1em; line-height: 1.6; color: #444; margin-bottom: 20px; flex-grow: 1; }
+        .card-content .ver-mais { font-size: 0.9em; color: #0069d9; text-decoration: none; margin-bottom: 15px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-weight: 500;}
+        .card-content .ver-mais svg { width: 1em; height: 1em; vertical-align: middle; transition: transform 0.2s ease;}
+        .card-content .ver-mais:hover svg { transform: translateY(2px); }
+        .card-content .status { font-size: 0.9em; color: #777; margin-bottom: 15px; background-color: #f8f9fa; padding: 8px 12px; border-radius: 4px; border: 1px solid #eee; display: inline-block;}
+        .card-content .availability { font-size: 0.85em; color: #6c757d; text-align: center; margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;}
+        .btn-inscrever { display: block; padding: 14px 25px; background-color: #17a2b8; color: white; text-align: center; text-decoration: none; border: none; border-radius: 6px; font-size: 1.05em; font-weight: 600; cursor: pointer; transition: background-color 0.3s ease, transform 0.1s ease; margin-top: auto; width: 100%; }
+        .btn-inscrever:hover { background-color: #138496; }
+        .btn-inscrever:active { transform: scale(0.98); }
+        .btn-inscrever-blue { background-color: #007bff; }
+        .btn-inscrever-blue:hover { background-color: #0056b3; }
+        .btn-inscrever-darkblue { background-color: #295a8e; }
+        .btn-inscrever-darkblue:hover { background-color: #1d3f66; }
+        .icon { width: 1em; height: 1em; fill: currentColor; vertical-align: -0.15em; margin-right: 4px;}
+        .svg-icon { display: inline-block; width: 1em; height: 1em; fill: currentColor; vertical-align: -0.125em; }
+
+        /* --- Estilos Específicos por Card (Largely Unchanged except Card 6) --- */
+        .slide.card-1 { max-width: 520px; }
+        .slide.card-1 .card-image { height: 220px; }
+        .slide.card-2 { max-width: 480px; }
+        .slide.card-2 .card-image { height: 250px; }
+        .slide.card-2 .card-content { text-align: center;}
+        .slide.card-2 h2 { margin-top: 10px; font-size: 1.8em;}
+        .slide.card-2 p.description { font-style: italic; color: #666; margin-bottom: 25px;}
+        .slide.card-2 .btn-inscrever { width: auto; display: inline-block; padding: 12px 30px;}
+        .slide.card-3 { max-width: 550px; }
+        .slide.card-3 .card-image { height: 230px; }
+        .slide.card-3 .ver-mais { color: #0069d9; font-size: 1.2em; font-weight: bold; }
+        .slide.card-4 { max-width: 460px; }
+        .slide.card-4 .card-image { height: 280px; }
+        .slide.card-4 .card-content { text-align: center; }
+        .slide.card-4 h2 { margin-bottom: 25px; }
+        .slide.card-4 .btn-inscrever { width: auto; display: inline-block; padding: 12px 30px;}
+        .slide.card-5 { max-width: 500px; }
+        .slide.card-5 .card-image { height: 200px; }
+
+         /* Card 6 (Design Gráfico - Layout Horizontal - Title Moved) */
+        .slide.card-6 {
+            flex-direction: row;
+            max-width: 750px;
+            max-height: 300px;
+            height: 300px;
+            padding: 0;
+        }
+        /* REMOVED: .slide.card-6 .card-graphic-title CSS rule */
+         .slide.card-6 .card-image-container { flex: 0 0 50%; height: 100%; position: relative; }
+         .slide.card-6 .card-image { width: 100%; height: 100%; max-height: none; object-fit: cover; }
+         .slide.card-6 .card-content {
+             flex: 1;
+             padding: 25px;
+             justify-content: flex-start; /* Align content to top */
+             overflow-y: auto;
+         }
+         /* Add H2 style specific to card 6 if needed, or use default */
+         .slide.card-6 .card-content h2 {
+             font-size: 1.4em; /* Example adjustment */
+             margin-bottom: 15px;
+         }
+         .slide.card-6 p.description {
+             margin-bottom: auto;
+             /* REMOVED: padding-top: 10px; */
+         }
+         .slide.card-6 .ver-mais { margin-top: 20px; }
+         .card-6-button-container { flex: 0 0 65px; height: 100%; background-color: #28a745; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.3s ease; position: relative; }
+         .card-6-button-container:hover { background-color: #218838; }
+         .card-6-button-container a { color: white; text-decoration: none; font-size: 1.1em; font-weight: bold; white-space: nowrap; writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); }
+
+
+        /* Controles de Navegação (Fixos na Tela - Unchanged) */
+        .slider-controls { position: fixed; top: 50%; left: 0; right: 0; transform: translateY(-50%); display: flex; justify-content: space-between; padding: 0 25px; pointer-events: none; z-index: 100; }
+        .slider-controls button { background-color: rgba(0, 0, 0, 0.4); color: white; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; font-size: 1.8em; pointer-events: all; transition: background-color 0.3s ease, transform 0.1s ease; display: flex; justify-content: center; align-items: center; line-height: 1; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .slider-controls button:hover { background-color: rgba(0, 0, 0, 0.7); }
+        .slider-controls button:active { transform: scale(0.95); }
+        .slider-controls button:disabled { background-color: rgba(0, 0, 0, 0.15); cursor: not-allowed; opacity: 0.6; transform: none; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Added Designer Credit -->
+    <div class="designer-credit">
+        <a href="https://www.bolivaralencastro.com.br" target="_blank" rel="noopener noreferrer">
+            <strong>Bolívar Alencastro</strong> | Product Designer
+        </a>
+    </div>
+
+    <!-- SVG Icons Definition (Unchanged) -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+        <symbol id="icon-mortarboard" viewBox="0 0 16 16"><path d="M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917z"/><path d="M4.176 9.032a.5.5 0 0 0-.656.327l-.5 1.7a.5.5 0 0 0 .294.605l4.5 1.8a.5.5 0 0 0 .372 0l4.5-1.8a.5.5 0 0 0 .294-.605l-.5-1.7a.5.5 0 0 0-.656-.327L8 10.466z"/></symbol>
+        <symbol id="icon-clock" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/></symbol>
+        <symbol id="icon-star-fill" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></symbol>
+        <symbol id="icon-star" viewBox="0 0 16 16"><path d="M2.866 14.85c-.078.444.36.791.746.593l4.39-2.256 4.389 2.256c.386.198.824-.149.746-.592l-.83-4.73 3.522-3.356c.33-.314.16-.888-.282-.95l-4.898-.696L8.465.792a.513.513 0 0 0-.927 0L5.354 5.12l-4.898-.696c-.441.062-.612.636-.283.95l3.523 3.356-.83 4.73zm4.905-2.767-3.686 1.894.694-3.957a.56.56 0 0 0-.163-.505L1.71 6.745l4.052-.576a.53.53 0 0 0 .393-.288L8 2.223l1.847 3.658a.53.53 0 0 0 .393.288l4.052.575-2.906 2.77a.56.56 0 0 0-.163.506l.694 3.957-3.686-1.894a.5.5 0 0 0-.461 0z"/></symbol>
+        <symbol id="icon-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/></symbol>
+    </svg>
+
+    <div class="slider-container">
+
+        <!-- Item 1 -->
+        <div class="slide-wrapper-item">
+            <div class="slide card-1">
+                <div class="card-image-container">
+                    <img src="https://images.pexels.com/photos/247819/pexels-photo-247819.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2" alt="LEARN" class="card-image">
+                    <div class="tag-new-yellow">NOVO</div>
+                    <div class="image-overlay-bottom tag-style"><svg class="svg-icon"><use xlink:href="#icon-clock"></use></svg> 6 horas</div>
+                </div>
+                <div class="card-content">
+                    <div class="tag">Sustentabilidade</div>
+                    <h2>Preservação Ambiental e Desenvolvimento Sustentável</h2>
+                    <div class="details">
+                        <span><svg class="svg-icon"><use xlink:href="#icon-mortarboard"></use></svg> Intermediário</span>
+                        <span class="rating">4.8<span class="stars">★★★★★</span> (325)</span>
+                    </div>
+                    <p class="description">Aprenda sobre os princípios do desenvolvimento sustentável e como preservar os recursos naturais para as futuras gerações.</p>
+                    <a href="#" class="ver-mais">Ver mais <svg class="svg-icon"><use xlink:href="#icon-chevron-down"></use></svg></a>
+                    <div class="status">Não iniciado</div>
+                    <button class="btn-inscrever">Inscrever-se</button>
+                </div>
+            </div>
+            <div class="ai-creator-info">Claude</div>
+        </div>
+
+        <!-- Item 2 -->
+        <div class="slide-wrapper-item">
+            <div class="slide card-2">
+                 <div class="card-image-container">
+                     <img src="https://images.pexels.com/photos/247819/pexels-photo-247819.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2" alt="LEARN" class="card-image">
+                 </div>
+                 <div class="card-content">
+                     <h2>Título do Curso</h2>
+                     <p class="description">Descrição breve do curso. Clique para saber mais.</p>
+                     <button class="btn-inscrever btn-inscrever-blue">Inscrever-se</button>
+                     <div class="availability">Disponível até: 31/12/2023</div>
+                 </div>
+             </div>
+             <div class="ai-creator-info">Mistral</div>
+        </div>
+
+        <!-- Item 3 -->
+        <div class="slide-wrapper-item">
+            <div class="slide card-3">
+                <div class="card-image-container">
+                    <img src="https://images.pexels.com/photos/247819/pexels-photo-247819.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2" alt="LEARN" class="card-image">
+                     <div class="tag-new-red">Novo</div>
+                     <div class="image-overlay-bottom">Curso de Desenvolvimento Profissional</div>
+                </div>
+                <div class="card-content">
+                     <h2>Gestão de Projetos Ágeis</h2>
+                     <div class="details">
+                         <span>Instrutor: Carlos Silva</span>
+                         <span><svg class="svg-icon"><use xlink:href="#icon-clock"></use></svg> 8 horas</span>
+                         <span><svg class="svg-icon"><use xlink:href="#icon-mortarboard"></use></svg> Intermediário</span>
+                         <span class="rating">4.8 <svg class="svg-icon"><use xlink:href="#icon-star-fill"></use></svg></span>
+                     </div>
+                     <p class="description">Aprenda os fundamentos das metodologias ágeis e como aplicá-las em projetos reais para aumentar a produtividade...</p>
+                     <a href="#" class="ver-mais">...</a>
+                     <button class="btn-inscrever btn-inscrever-blue">Inscrever-se</button>
+                 </div>
+             </div>
+             <div class="ai-creator-info">DeepSeek</div>
+        </div>
+
+        <!-- Item 4 -->
+        <div class="slide-wrapper-item">
+            <div class="slide card-4">
+                 <div class="card-image-container">
+                     <img src="https://images.pexels.com/photos/247819/pexels-photo-247819.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2" alt="LEARN" class="card-image">
+                 </div>
+                 <div class="card-content">
+                     <h2>Fundamentos de Literatura Moderna</h2>
+                     <a href="#" class="ver-mais">Ver mais</a>
+                     <button class="btn-inscrever btn-inscrever-darkblue">Inscrever-se</button>
+                 </div>
+             </div>
+             <div class="ai-creator-info">Grok</div>
+        </div>
+
+        <!-- Item 5 -->
+         <div class="slide-wrapper-item">
+            <div class="slide card-5">
+                 <div class="card-image-container">
+                    <img src="https://images.pexels.com/photos/247819/pexels-photo-247819.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2" alt="LEARN" class="card-image">
+                 </div>
+                 <div class="card-content">
+                     <h2>Introdução à Programação Web</h2>
+                     <p class="description">Este curso introdutório oferece uma visão geral dos conceitos fundamentais da programação web...</p>
+                     <a href="#" class="ver-mais">Ver mais</a>
+                     <button class="btn-inscrever btn-inscrever-blue">Inscrever-se</button>
+                 </div>
+             </div>
+             <div class="ai-creator-info">Gemini</div>
+        </div>
+
+        <!-- Item 6 -->
+         <div class="slide-wrapper-item">
+            <div class="slide card-6">
+                 <!-- REMOVED Title div from here -->
+                 <div class="card-image-container">
+                      <img src="https://images.pexels.com/photos/247819/pexels-photo-247819.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2" alt="LEARN" class="card-image">
+                 </div>
+                 <div class="card-content">
+                     <!-- MOVED H2 Inside content -->
+                     <h2>Introdução ao Design Gráfico</h2>
+                     <p class="description">Aprenda os fundamentos do design gráfico, incluindo teoria das cores, tipografia e composição visual...</p>
+                     <a href="#" class="ver-mais">Mostrar mais</a>
+                 </div>
+                 <div class="card-6-button-container">
+                     <a href="#">Inscrever-se</a>
+                 </div>
+             </div>
+             <div class="ai-creator-info">ChatGPT</div>
+        </div>
+
+    </div>
+
+    <!-- Controles (Setas - Unchanged) -->
+    <div class="slider-controls">
+        <button id="prevBtn" title="Anterior">❮</button>
+        <button id="nextBtn" title="Próximo">❯</button>
+    </div>
+
+    <script>
+        // Select the wrapper items now
+        const slideWrapperItems = document.querySelectorAll('.slide-wrapper-item');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        let currentIndex = 0;
+        const totalSlides = slideWrapperItems.length; // Use wrapper count
+
+        function showSlide(index) {
+            // Boundary checks
+            if (index < 0) {
+                index = 0; // Stop at first
+                // OR index = totalSlides - 1; // for looping
+            } else if (index >= totalSlides) {
+                index = totalSlides - 1; // Stop at last
+                // OR index = 0; // for looping
+            }
+
+            // Toggle active class on the WRAPPER
+            slideWrapperItems.forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+
+            currentIndex = index;
+
+            // Update button states
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === totalSlides - 1;
+        }
+
+        // Event listeners for buttons
+        nextBtn.addEventListener('click', () => {
+            showSlide(currentIndex + 1);
+        });
+
+        prevBtn.addEventListener('click', () => {
+            showSlide(currentIndex - 1);
+        });
+
+        // Keyboard navigation (optional)
+        document.addEventListener('keydown', (event) => {
+            if (document.activeElement && ['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName)) {
+                return; // Don't navigate if user is typing or focusing a button
+            }
+            if (event.key === 'ArrowRight') {
+                nextBtn.click(); // Simulate click
+            } else if (event.key === 'ArrowLeft') {
+                prevBtn.click(); // Simulate click
+            }
+        });
+
+        // Initial setup: Show the first slide
+        // Use setTimeout to ensure styles are applied before transition starts on load
+        setTimeout(() => {
+            showSlide(currentIndex);
+        }, 10);
+
+
+    </script>
+
+</body>
+</html>
